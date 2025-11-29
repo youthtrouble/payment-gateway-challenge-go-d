@@ -1,28 +1,39 @@
 package repository
 
 import (
-	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/models"
+	"sync"
+
+	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/domain"
 )
 
+// In production, this would be replaced with a database implementation
 type PaymentsRepository struct {
-	payments []models.PostPaymentResponse
+	payments map[string]*domain.Payment
+	mu       sync.RWMutex // Thread-safe for concurrent access
 }
 
 func NewPaymentsRepository() *PaymentsRepository {
 	return &PaymentsRepository{
-		payments: []models.PostPaymentResponse{},
+		payments: make(map[string]*domain.Payment),
 	}
 }
 
-func (ps *PaymentsRepository) GetPayment(id string) *models.PostPaymentResponse {
-	for _, element := range ps.payments {
-		if element.Id == id {
-			return &element
-		}
-	}
+func (r *PaymentsRepository) Save(payment *domain.Payment) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.payments[payment.ID] = payment
 	return nil
 }
 
-func (ps *PaymentsRepository) AddPayment(payment models.PostPaymentResponse) {
-	ps.payments = append(ps.payments, payment)
+func (r *PaymentsRepository) FindByID(id string) (*domain.Payment, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	payment, exists := r.payments[id]
+	if !exists {
+		return nil, nil
+	}
+
+	return payment, nil
 }

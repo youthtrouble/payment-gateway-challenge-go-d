@@ -9,22 +9,100 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "contact": {
+            "name": "API Support",
+            "url": "https://github.com/cko-recruitment/payment-gateway-challenge-go"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/ping": {
-            "get": {
+        "/api/payments": {
+            "post": {
+                "description": "Process a payment through the payment gateway and return the result",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Process a new payment",
+                "parameters": [
+                    {
+                        "description": "Payment details",
+                        "name": "payment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PostPaymentRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Payment processed successfully (Authorized or Declined)",
                         "schema": {
-                            "$ref": "#/definitions/main.Pong"
+                            "$ref": "#/definitions/models.PostPaymentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or validation error (Rejected)",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bank service unavailable or error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/payments/{id}": {
+            "get": {
+                "description": "Get details of a previously processed payment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Retrieve a payment by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment found",
+                        "schema": {
+                            "$ref": "#/definitions/models.GetPaymentResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Payment not found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -32,30 +110,171 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "main.Pong": {
+        "models.ErrorResponse": {
             "type": "object",
             "properties": {
-                "message": {
-                    "type": "string"
+                "error": {
+                    "description": "Error message",
+                    "type": "string",
+                    "example": "card number must be between 14-19 digits"
                 }
             }
-        }
-    },
-    "securityDefinitions": {
-        "BasicAuth": {
-            "type": "basic"
+        },
+        "models.GetPaymentResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "Amount in minor currency units",
+                    "type": "integer",
+                    "example": 100
+                },
+                "card_number_last_four": {
+                    "description": "Last 4 digits of card",
+                    "type": "string",
+                    "example": "8877"
+                },
+                "currency": {
+                    "description": "Currency code",
+                    "type": "string",
+                    "example": "GBP"
+                },
+                "expiry_month": {
+                    "description": "Expiry month",
+                    "type": "integer",
+                    "example": 12
+                },
+                "expiry_year": {
+                    "description": "Expiry year",
+                    "type": "integer",
+                    "example": 2026
+                },
+                "id": {
+                    "description": "Unique payment ID",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "status": {
+                    "description": "Payment status",
+                    "type": "string",
+                    "enum": [
+                        "Authorized",
+                        "Declined"
+                    ],
+                    "example": "Authorized"
+                }
+            }
+        },
+        "models.PostPaymentRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "card_number",
+                "currency",
+                "cvv",
+                "expiry_month",
+                "expiry_year"
+            ],
+            "properties": {
+                "amount": {
+                    "description": "Amount in minor currency units (e.g., cents)",
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 100
+                },
+                "card_number": {
+                    "description": "Full card number (14-19 digits, numeric only)",
+                    "type": "string",
+                    "maxLength": 19,
+                    "minLength": 14,
+                    "example": "2222405343248877"
+                },
+                "currency": {
+                    "description": "Currency code (USD, GBP, or EUR)",
+                    "type": "string",
+                    "enum": [
+                        "USD",
+                        "GBP",
+                        "EUR"
+                    ],
+                    "example": "GBP"
+                },
+                "cvv": {
+                    "description": "CVV (3-4 digits)",
+                    "type": "string",
+                    "maxLength": 4,
+                    "minLength": 3,
+                    "example": "123"
+                },
+                "expiry_month": {
+                    "description": "Expiry month (1-12)",
+                    "type": "integer",
+                    "maximum": 12,
+                    "minimum": 1,
+                    "example": 12
+                },
+                "expiry_year": {
+                    "description": "Expiry year (must be in future)",
+                    "type": "integer",
+                    "example": 2026
+                }
+            }
+        },
+        "models.PostPaymentResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "Amount in minor currency units",
+                    "type": "integer",
+                    "example": 100
+                },
+                "card_number_last_four": {
+                    "description": "Last 4 digits of card",
+                    "type": "string",
+                    "example": "8877"
+                },
+                "currency": {
+                    "description": "Currency code",
+                    "type": "string",
+                    "example": "GBP"
+                },
+                "expiry_month": {
+                    "description": "Expiry month",
+                    "type": "integer",
+                    "example": 12
+                },
+                "expiry_year": {
+                    "description": "Expiry year",
+                    "type": "integer",
+                    "example": 2026
+                },
+                "id": {
+                    "description": "Unique payment ID",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "status": {
+                    "description": "Payment status",
+                    "type": "string",
+                    "enum": [
+                        "Authorized",
+                        "Declined",
+                        "Rejected"
+                    ],
+                    "example": "Authorized"
+                }
+            }
         }
     }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0",
 	Host:             "localhost:8090",
 	BasePath:         "/",
-	Schemes:          []string{},
-	Title:            "Payment Gateway Challenge Go",
-	Description:      "Interview challenge for building a Payment Gateway - Go version",
+	Schemes:          []string{"http"},
+	Title:            "Payment Gateway API",
+	Description:      "A payment gateway API that allows merchants to process card payments and retrieve payment details.\nThe gateway validates requests, communicates with an acquiring bank, and stores payment information.\n\n## Payment Status\n- **Authorized**: Payment was approved by the bank\n- **Declined**: Payment was declined by the bank\n- **Rejected**: Payment was rejected due to validation errors (never sent to bank)\n\n## Security\n- Only the last 4 digits of card numbers are stored and returned\n- CVV is never stored, only sent to the bank\n\n## Supported Currencies\nUSD, GBP, EUR",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

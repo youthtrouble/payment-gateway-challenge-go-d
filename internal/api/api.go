@@ -6,20 +6,32 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/client"
 	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/repository"
+	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"golang.org/x/sync/errgroup"
 )
 
 type Api struct {
-	router       *chi.Mux
-	paymentsRepo *repository.PaymentsRepository
+	router         *chi.Mux
+	paymentService *service.PaymentService
 }
 
 func New() *Api {
-	a := &Api{}
-	a.paymentsRepo = repository.NewPaymentsRepository()
+	return NewWithBankURL("http://localhost:8081")
+}
+
+func NewWithBankURL(bankURL string) *Api {
+	// Initialize dependencies from bottom up
+	repo := repository.NewPaymentsRepository()
+	bankClient := client.NewHTTPBankClient(bankURL)
+	paymentService := service.NewPaymentService(bankClient, repo)
+
+	a := &Api{
+		paymentService: paymentService,
+	}
 	a.setupRouter()
 
 	return a
@@ -56,9 +68,15 @@ func (a *Api) Run(ctx context.Context, addr string) error {
 func (a *Api) setupRouter() {
 	a.router = chi.NewRouter()
 	a.router.Use(middleware.Logger)
+	a.router.Use(middleware.Recoverer) // Recover from panics
 
 	a.router.Get("/ping", a.PingHandler())
 	a.router.Get("/swagger/*", a.SwaggerHandler())
 
+	a.router.Post("/api/payments", a.PostPaymentHandler())
 	a.router.Get("/api/payments/{id}", a.GetPaymentHandler())
+}
+
+func (a *Api) Router() *chi.Mux {
+	return a.router
 }

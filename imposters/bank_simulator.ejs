@@ -1,6 +1,6 @@
 {
     "imposters": [{
-            "port": 8080,
+            "port": 8081,
             "protocol": "http",
             "name": "Bank simulator",
             "defaultResponse": {
@@ -16,7 +16,7 @@
             "stubs": [{
                     "predicates": [{
 						"and": [
-							{ "equals": { "method": "POST", "path": "/payments" } }, 
+							{ "equals": { "method": "POST", "path": "/payments" } },
 							{ "or": [
 								{ "exists": {"body": {"card_number": false}} },
 								{ "exists": {"body": {"expiry_date": false}} },
@@ -35,7 +35,7 @@
                 }, {
                     "predicates": [{
                             "and": [
-								{ "equals": { "method": "POST", "path": "/payments" } }, 
+								{ "equals": { "method": "POST", "path": "/payments" } },
 								{ "or": [
 									{ "endsWith": { "body": { "card_number": "1" } } },
 									{ "endsWith": { "body": { "card_number": "3" } } },
@@ -60,7 +60,7 @@
                 }, {
                     "predicates": [{
                             "and": [
-								{ "equals": { "method": "POST", "path": "/payments" } }, 
+								{ "equals": { "method": "POST", "path": "/payments" } },
 								{ "or": [
 									{ "endsWith": { "body": { "card_number": "2" } } },
 									{ "endsWith": { "body": { "card_number": "4" } } },
@@ -80,7 +80,7 @@
                 }, {
                     "predicates": [{
                             "and": [
-								{ "equals": { "method": "POST", "path": "/payments" } }, 
+								{ "equals": { "method": "POST", "path": "/payments" } },
 								{ "endsWith": { "body": { "card_number": "0" } } }
                             ]
                         }

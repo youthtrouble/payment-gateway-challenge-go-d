@@ -1,26 +1,208 @@
 basePath: /
 definitions:
-  main.Pong:
+  models.ErrorResponse:
     properties:
-      message:
+      error:
+        description: Error message
+        example: card number must be between 14-19 digits
         type: string
     type: object
-host: localhost:8089
+  models.GetPaymentResponse:
+    properties:
+      amount:
+        description: Amount in minor currency units
+        example: 100
+        type: integer
+      card_number_last_four:
+        description: Last 4 digits of card
+        example: "8877"
+        type: string
+      currency:
+        description: Currency code
+        example: GBP
+        type: string
+      expiry_month:
+        description: Expiry month
+        example: 12
+        type: integer
+      expiry_year:
+        description: Expiry year
+        example: 2026
+        type: integer
+      id:
+        description: Unique payment ID
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      status:
+        description: Payment status
+        enum:
+        - Authorized
+        - Declined
+        example: Authorized
+        type: string
+    type: object
+  models.PostPaymentRequest:
+    properties:
+      amount:
+        description: Amount in minor currency units (e.g., cents)
+        example: 100
+        minimum: 1
+        type: integer
+      card_number:
+        description: Full card number (14-19 digits, numeric only)
+        example: "2222405343248877"
+        maxLength: 19
+        minLength: 14
+        type: string
+      currency:
+        description: Currency code (USD, GBP, or EUR)
+        enum:
+        - USD
+        - GBP
+        - EUR
+        example: GBP
+        type: string
+      cvv:
+        description: CVV (3-4 digits)
+        example: "123"
+        maxLength: 4
+        minLength: 3
+        type: string
+      expiry_month:
+        description: Expiry month (1-12)
+        example: 12
+        maximum: 12
+        minimum: 1
+        type: integer
+      expiry_year:
+        description: Expiry year (must be in future)
+        example: 2026
+        type: integer
+    required:
+    - amount
+    - card_number
+    - currency
+    - cvv
+    - expiry_month
+    - expiry_year
+    type: object
+  models.PostPaymentResponse:
+    properties:
+      amount:
+        description: Amount in minor currency units
+        example: 100
+        type: integer
+      card_number_last_four:
+        description: Last 4 digits of card
+        example: "8877"
+        type: string
+      currency:
+        description: Currency code
+        example: GBP
+        type: string
+      expiry_month:
+        description: Expiry month
+        example: 12
+        type: integer
+      expiry_year:
+        description: Expiry year
+        example: 2026
+        type: integer
+      id:
+        description: Unique payment ID
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      status:
+        description: Payment status
+        enum:
+        - Authorized
+        - Declined
+        - Rejected
+        example: Authorized
+        type: string
+    type: object
+host: localhost:8090
 info:
-  contact: {}
-  description: Interview challenge for building a Payment Gateway - Go version
-  title: Payment Gateway Challenge Go
+  contact:
+    name: API Support
+    url: https://github.com/cko-recruitment/payment-gateway-challenge-go
+  description: |-
+    A payment gateway API that allows merchants to process card payments and retrieve payment details.
+    The gateway validates requests, communicates with an acquiring bank, and stores payment information.
+
+    ## Payment Status
+    - **Authorized**: Payment was approved by the bank
+    - **Declined**: Payment was declined by the bank
+    - **Rejected**: Payment was rejected due to validation errors (never sent to bank)
+
+    ## Security
+    - Only the last 4 digits of card numbers are stored and returned
+    - CVV is never stored, only sent to the bank
+
+    ## Supported Currencies
+    USD, GBP, EUR
+  title: Payment Gateway API
+  version: "1.0"
 paths:
-  /ping:
-    get:
+  /api/payments:
+    post:
+      consumes:
+      - application/json
+      description: Process a payment through the payment gateway and return the result
+      parameters:
+      - description: Payment details
+        in: body
+        name: payment
+        required: true
+        schema:
+          $ref: '#/definitions/models.PostPaymentRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Payment processed successfully (Authorized or Declined)
           schema:
-            $ref: '#/definitions/main.Pong'
-securityDefinitions:
-  BasicAuth:
-    type: basic
+            $ref: '#/definitions/models.PostPaymentResponse'
+        "400":
+          description: Invalid request or validation error (Rejected)
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "502":
+          description: Bank service unavailable or error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Process a new payment
+      tags:
+      - payments
+  /api/payments/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get details of a previously processed payment
+      parameters:
+      - description: Payment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Payment found
+          schema:
+            $ref: '#/definitions/models.GetPaymentResponse'
+        "404":
+          description: Payment not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Retrieve a payment by ID
+      tags:
+      - payments
+schemes:
+- http
 swagger: "2.0"

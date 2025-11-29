@@ -32,9 +32,34 @@ func (a *Api) SwaggerHandler() http.HandlerFunc {
 	)
 }
 
-// GetPaymentHandler returns an http.HandlerFunc that handles Payments GET requests.
-func (a *Api) GetPaymentHandler() http.HandlerFunc {
-	h := handlers.NewPaymentsHandler(a.paymentsRepo)
+// PostPaymentHandler godoc
+// @Summary Process a new payment
+// @Description Process a payment through the payment gateway and return the result
+// @Tags payments
+// @Accept json
+// @Produce json
+// @Param payment body models.PostPaymentRequest true "Payment details"
+// @Success 200 {object} models.PostPaymentResponse "Payment processed successfully (Authorized or Declined)"
+// @Failure 400 {object} models.ErrorResponse "Invalid request or validation error (Rejected)"
+// @Failure 502 {object} models.ErrorResponse "Bank service unavailable or error"
+// @Router /api/payments [post]
+func (a *Api) PostPaymentHandler() http.HandlerFunc {
+	h := handlers.NewPaymentsHandler(a.paymentService)
+	return h.PostHandler()
+}
 
+// GetPaymentHandler godoc
+// @Summary Retrieve a payment by ID
+// @Description Get details of a previously processed payment
+// @Tags payments
+// @Accept json
+// @Produce json
+// @Param id path string true "Payment ID"
+// @Success 200 {object} models.GetPaymentResponse "Payment found"
+// @Failure 404 {object} models.ErrorResponse "Payment not found"
+// @Failure 500 {object} models.ErrorResponse "Internal server error"
+// @Router /api/payments/{id} [get]
+func (a *Api) GetPaymentHandler() http.HandlerFunc {
+	h := handlers.NewPaymentsHandler(a.paymentService)
 	return h.GetHandler()
 }

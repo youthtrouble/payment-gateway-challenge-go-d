@@ -17,13 +17,30 @@ var (
 	date    = "unknown"
 )
 
-//	@title			Payment Gateway Challenge Go
-//	@description	Interview challenge for building a Payment Gateway - Go version
+//	@title			Payment Gateway API
+//	@version		1.0
+//	@description	A payment gateway API that allows merchants to process card payments and retrieve payment details.
+//	@description	The gateway validates requests, communicates with an acquiring bank, and stores payment information.
+//	@description
+//	@description	## Payment Status
+//	@description	- **Authorized**: Payment was approved by the bank
+//	@description	- **Declined**: Payment was declined by the bank
+//	@description	- **Rejected**: Payment was rejected due to validation errors (never sent to bank)
+//	@description
+//	@description	## Security
+//	@description	- Only the last 4 digits of card numbers are stored and returned
+//	@description	- CVV is never stored, only sent to the bank
+//	@description
+//	@description	## Supported Currencies
+//	@description	USD, GBP, EUR
+
+//	@contact.name	API Support
+//	@contact.url	https://github.com/cko-recruitment/payment-gateway-challenge-go
 
 //	@host		localhost:8090
 //	@BasePath	/
 
-// @securityDefinitions.basic	BasicAuth
+//	@schemes	http
 func main() {
 	fmt.Printf("version %s, commit %s, built at %s\n", version, commit, date)
 	docs.SwaggerInfo.Version = version

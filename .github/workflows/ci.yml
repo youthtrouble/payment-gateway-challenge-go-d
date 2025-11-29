@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  # Job 1: Run unit tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Verify dependencies
+      run: go mod verify
+
+    - name: Run unit tests
+      run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./internal/...
+
+    - name: Generate coverage report
+      run: go tool cover -html=coverage.out -o coverage.html
+
+    - name: Upload coverage to Codecov (optional)
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.out
+        flags: unittests
+        name: unit-tests
+        fail_ci_if_error: false
+      continue-on-error: true
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          coverage.out
+          coverage.html
+
+  # Job 2: Run integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Start bank simulator
+      run: docker compose up -d
+
+    - name: Wait for bank simulator to be ready
+      run: |
+        echo "Waiting for bank simulator to start..."
+        timeout 30 sh -c 'until curl -f http://localhost:8081/ping 2>/dev/null || curl -f http://localhost:8081 2>/dev/null; do
+          echo "Waiting for bank simulator..."
+          sleep 2
+        done'
+        echo "Bank simulator is ready!"
+
+    - name: Run integration tests
+      run: go test -v -race ./test/integration/...
+
+    - name: Show docker logs on failure
+      if: failure()
+      run: docker compose logs
+
+    - name: Stop bank simulator
+      if: always()
+      run: docker compose down
+
+  # Job 3: Build check
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Build application
+      run: go build -v ./...
+
+    - name: Build main binary
+      run: go build -v -o payment-gateway .
+
+    - name: Upload binary artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: payment-gateway-binary
+        path: payment-gateway
