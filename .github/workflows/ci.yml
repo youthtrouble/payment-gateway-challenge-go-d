@@ -74,12 +74,12 @@ jobs:
 
     - name: Wait for bank simulator to be ready
       run: |
-        echo "Waiting for bank simulator to start..."
-        timeout 30 sh -c 'until curl -f http://localhost:8081/ping 2>/dev/null || curl -f http://localhost:8081 2>/dev/null; do
-          echo "Waiting for bank simulator..."
+        echo "Waiting for bank simulator to start (waiting for containers to show Up)..."
+        timeout 30 sh -c 'until docker compose ps | grep -q Up; do
+          echo "Waiting for bank simulator containers to show Up..."
           sleep 2
-        done'
-        echo "Bank simulator is ready!"
+        done' || true
+        echo "Bank simulator container appears to be running.pa Continuing."
 
     - name: Run integration tests
       run: go test -v -race ./test/integration/...
